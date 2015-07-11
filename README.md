@@ -200,6 +200,32 @@ then run:
 	
 
 
+# Using the UI to control your robot
+
+After starting the UI you first need to select a port from the drop list.
+
+If your port is missing click the 'Refresh Ports' button to refresh the list of ports. You will often need to do this if you have unplugged and then plugged the USB connector in.
+
+With you Arduino up and running and the USB connected click the 'Connect' button to connect to the Arduino.
+
+The Arduino should respond with the Controller's version no.
+
+You can now type commands into the command bar to the left of the 'Send Action' button.
+
+Responses from the Controller are displayed in the log area below the Command Bar.
+
+Use the 'Stop All' button to power down all of the motors.
+
+The 'Sequences' button opens a UI that allows you to enter/save and reload a sequence of commands which you can then Run on the Arduino.
+
+Just make certain you only enter one command per line.
+
+you can comment out a line by inserting leading // characters (standard java/C/C++ single line comment)
+
+
+
+
+
 
 
 

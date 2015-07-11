@@ -194,6 +194,15 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 				File portFile = new File("/dev", port);
 				robotResponseListener.start(portFile);
 				fosDevice = new FileOutputStream(portFile);
+				
+				try
+				{
+					sendCmd("Hi");
+				}
+				catch (NotConnectedException e)
+				{	
+					showError("Not Connected");
+				}
 
 				isConnected = true;
 				connect.setEnabled(false);
