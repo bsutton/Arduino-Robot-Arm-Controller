@@ -24,7 +24,7 @@ Example command sequence:
 
 The command structure is:
 
-	<cmd> <args>
+	<cmd> <arg, arg, ...> <newline>
 
 The following commands are supported:
 
