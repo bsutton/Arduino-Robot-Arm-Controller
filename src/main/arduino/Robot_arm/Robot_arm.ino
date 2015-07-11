@@ -1,4 +1,4 @@
-#include <Wire.h>
+EacR#include <Wire.h>
 
 #include <Adafruit_PWMServoDriver.h>
 
@@ -74,7 +74,7 @@ void loop()
     cmdStopMotor();
   else   if (cmd.equalsIgnoreCase("status"))
   {
-    Serial.println("Feeling good.");
+    Serial.println("Feeling groovy.");
 
   }
   else
@@ -88,7 +88,7 @@ void loop()
 
 void cmdHi()
 {
-  Serial.println("Hello back");
+  Serial.println("version: 1.0");
 }
 
 void cmdWait()
