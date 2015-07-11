@@ -34,6 +34,16 @@ The following commands are supported:
 * stop
 * status
 
+##Comments
+When running a sequence file you can comment out a line by prefixing it with:
+
+// 
+
+e.g.
+
+	// mov 1, 200
+
+The above line will be ignored.
 
 
 
@@ -50,7 +60,7 @@ Action: none
 
 Returns:
 
-version: 1.0
+	version: 1.0
 
 ##Command: mov
 
@@ -71,7 +81,8 @@ Args:
 Sets the given motor to the given frequency
 
 Returns:
-none
+
+	Mov: motor <motor>, frequency <frequency>
 
 ##Command: wait
 
@@ -92,7 +103,7 @@ Makes the controller sleep for the given number of milliseconds.
 
 Returns:
 
-none
+	Wait: <wait>
 
 ##Command: stop
 
@@ -112,7 +123,7 @@ Stops the selected motor
 
 Returns: 
 
-none
+	Stop: motor <motor>
 
 
 ## Command: status
@@ -127,4 +138,74 @@ Returns the controller's current status.
 
 Returns:
 Feeling groovy.
+
+
+#Install Arduino control software
+
+The Arduino controller is located in:
+src/main/arduino/Controller/Controller.ino
+
+The controller requires the Adafruit PWM Servo Library to be installed.
+
+[Servo Library](https://github.com/adafruit/Adafruit-PWM-Servo-Driver-Library)
+
+Once the adafruit library is installed then simply upload the Controller.ino to your Arduino and its ready to go.
+
+If you open the Arduino IDE serial monitor (Tools | Serial Monitor) you can now directly interact with the controller.
+
+Type a command at the terminal and press enter to run it.
+
+	Hi
+	version: 1.0
+	
+If the 'Hi' command works then the controller is up and running.
+
+#Install java swing UI
+
+The UI is written in java and has been complied with Java 8.
+
+Development is done using Eclipse Luna and Maven 3
+
+You can build the application from the command line (once maven is installed) by running:
+
+	cd <root directory where you saved the java source>
+	mvn install
+	
+#Run java swing UI
+
+
+To run the UI
+
+	cd target
+	java -jar robotarm-1.0-jar-with-dependencies.jar
+
+
+##Using earlier versions of java
+You can probably run it with a earlier version of java by changing the 'source' and 'target' properties in the pom.xml file:
+
+For java 7
+
+Change
+
+	<source>1.8</source>
+	<target>1.8</target>
+To
+
+	<source>1.7</source>
+    <target>1.7</target>
+          
+then run:
+	
+	mvn install
+	
+
+
+
+
+
+
+
+
+
+
 
