@@ -4,27 +4,24 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-
-
-public class RobotResponseListener implements Runnable
+public class RobotResponseListener
 {
 	Logger logger = LogManager.getLogger();
+	private volatile boolean stopping = false;
 
-	private final AtomicReference<CountDownLatch> pauseLatch = new AtomicReference<>(new CountDownLatch(1));
-	private final AtomicReference<CountDownLatch> pausedLatch = new AtomicReference<>(new CountDownLatch(1));
-
-
-	private volatile boolean stopped = false;
 	private FileInputStream fis;
 	private iDisplay display;
 
 	private File serialDevice;
+
+	private ExecutorService executor;
 
 	RobotResponseListener(iDisplay display)
 	{
@@ -34,19 +31,24 @@ public class RobotResponseListener implements Runnable
 	/**
 	 * Stop the robot listener thread and close the connection to the robot.
 	 */
-	public void stop()
+	public synchronized void stop()
 	{
-		pauseThread();
-		stopped = true;
 		try
 		{
+			stopping = true;
+			executor.shutdown();
+			boolean clean = executor.awaitTermination(60, TimeUnit.SECONDS);
+			logger.info("Terminated {}", clean);
 			fis.close();
 		}
 		catch (IOException e)
 		{
 			logger.warn("Error {} closing serial device {}", e.getMessage(), this.serialDevice.getAbsoluteFile());
 		}
-
+		catch (InterruptedException e)
+		{
+			logger.error("Interrupted exception awaiting termination of response listener.");
+		}
 	}
 
 	/**
@@ -60,95 +62,57 @@ public class RobotResponseListener implements Runnable
 	 * 
 	 * @param serialPortDevice
 	 */
-	public void start(File serialPortDevice)
+	public synchronized void start(File serialPortDevice)
 	{
 		this.serialDevice = serialPortDevice;
+		this.stopping = false;
 
-		pauseThread();
 		try
 		{
 			fis = new FileInputStream(serialPortDevice);
+
+			executor = Executors.newSingleThreadExecutor();
+			executor.submit(() -> {
+				int in;
+				try
+				{
+					while (!stopping)
+					{
+						StringBuilder line = new StringBuilder("");
+						while (fis.available() != 0)
+						{
+							in = fis.read();
+							line.append((char)in);
+							if (in == '\n')
+							{
+								display.append(line.toString());
+								line.setLength(0);
+								line.trimToSize();
+							}
+						}
+						try
+						{
+							Thread.sleep(200);
+						}
+						catch (Exception e)
+						{
+							// should never happen.
+						}
+					}
+				}
+				catch (IOException e)
+				{
+					logger.error("Error {} writing to serial port {}", e.getMessage(),
+							this.serialDevice.getAbsolutePath());
+				}
+
+			});
+
 		}
 		catch (FileNotFoundException e)
 		{
 			logger.error("Serial port {} not found.", this.serialDevice.getAbsolutePath());
 		}
-
-		resumeThread();
-
 	}
 
-	/**
-	 * The main read loop where we read data from the robot over the serial port
-	 * we have open.
-	 */
-	public void run()
-	{
-		while (!stopped)
-		{
-
-			checkForPaused();
-			if (!stopped)
-			{
-				int in;
-				try
-				{
-					while (fis.available() != 0)
-					{
-						in = fis.read();
-						display.append(String.valueOf((char) in));
-					}
-				}
-				catch (IOException e)
-				{
-					logger.error("Error {} writing to serial port {}",
-							e.getMessage(), this.serialDevice.getAbsolutePath());
-				}
-			}
-		}
-	}
-
-	private void checkForPaused()
-	{
-		try
-		{
-			// Reset the paused counter so that as soon as we tell the world that we are unpaused
-			// we will be ready to be paused again.
-			pausedLatch.set(new CountDownLatch(1));
-			
-			// signal that we are now paused
-			pauseLatch.get().countDown();
-
-			// wait until we are unpaused.
-			pausedLatch.get().await();
-		}
-		catch (Exception e)
-		{
-		}
-	}
-
-	/**
-	 * signals the thread to pause and returns once the thread is fully paused.
-	 * 
-	 * @throws InterruptedException
-	 */
-	synchronized public void pauseThread() 
-	{
-		// request and wait for the thread to pause
-		pauseLatch.set(new CountDownLatch(1));
-		try
-		{
-			pauseLatch.get().await();
-		}
-		catch (InterruptedException e)
-		{
-			logger.warn(e);
-		}
-	}
-
-	synchronized public void resumeThread()
-	{
-		// signal that we are now unpaused.
-		pausedLatch.get().countDown();
-	}
 }

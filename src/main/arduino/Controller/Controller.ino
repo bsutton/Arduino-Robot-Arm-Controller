@@ -1,40 +1,26 @@
-EacR#include <Wire.h>
+#include <Wire.h>
 
 #include <Adafruit_PWMServoDriver.h>
 
-#include <Servo.h>
-
 Adafruit_PWMServoDriver servo = Adafruit_PWMServoDriver ();
 
-Servo servo_1;
-Servo servo_2;
-Servo servo_3;
+int maxMotor = 15;
+int motorPos[16];
 
-
-//introducing variables
-
-
-int V = 3; // variable to control speed  
-int Ampl = 180; // variable to control aplitude
-int Pd = 0.1; // phase difference variable from 0 to 1
-
-
-int pos1 = 180;
-int pos2 = 90;
-int pos3 = 90;
-
+int processingCount = 0;
+int unrecognisedCount = 0;
 
 void setup()
 {
-  //servo_1.attach(9, 800, 2200); 
-  //servo_2.attach(10, 800, 2200);
-  //servo_3.attach(11, 800, 2200); 
 
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.setTimeout(50);
   servo.begin();
   servo.setPWMFreq(60);
-
+  
+  for (int i = 0; i <= maxMotor; i++)
+    motorPos[i] = 0;
+    
   Serial.println("Ready for action");
 }
 
@@ -42,7 +28,7 @@ void setup()
 void loop()
 {
   // Loop and wait for a command we recognise
-  String cmd;
+  String cmd = "";
 
   int inbyte;
 
@@ -55,32 +41,52 @@ void loop()
 
 
     inbyte = Serial.read();
-    if (inbyte == '\n' || inbyte == ' ')
+    if (inbyte == '\n')
       break;
 
     if (inbyte != 0)
       cmd += (char(inbyte));
   } 
 
-  // \n or : so we now look for what cmd we have
+    // \n so we now look for what cmd we have
+  
+    cmd.trim();
+    cmd.toLowerCase();
+    
+//    Serial.print("Processing(");
+//    Serial.print(processingCount++);
+//    Serial.print("): '");
+//    Serial.print(cmd);
+//    Serial.println("'");
+//    Serial.flush();
 
-    if (cmd.equalsIgnoreCase("hi"))
+   if (cmd.startsWith("hi"))
     cmdHi();
-  else   if (cmd.equalsIgnoreCase("mov"))
-    cmdMoveMotor();
-     else   if (cmd.equalsIgnoreCase("wait"))
-    cmdWait();
-  else   if (cmd.equalsIgnoreCase("stop"))
-    cmdStopMotor();
-  else   if (cmd.equalsIgnoreCase("status"))
+  else   if (cmd.startsWith("mov"))
+    cmdMoveMotor(cmd);
+  else   if (cmd.startsWith("wait"))
+    cmdWait(cmd);
+  else   if (cmd.startsWith("stop"))
+    cmdStopMotor(cmd);
+  else   if (cmd.startsWith("status"))
   {
     Serial.println("Feeling groovy.");
 
   }
+  else if (cmd.equalsIgnoreCase(""))
+  {
+    // empty line so ignore it.
+    
+  }
   else
   {
-    Serial.print("Unrecoginised command: ");
-    Serial.println(cmd);
+    Serial.print("Unrecoginised command: '");
+    Serial.print(unrecognisedCount++);
+    Serial.print("): '");
+    Serial.print(cmd);
+    Serial.println("'");
+    Serial.flush();
+
   }
 
 
@@ -91,61 +97,103 @@ void cmdHi()
   Serial.println("version: 1.0");
 }
 
-void cmdWait()
+void cmdWait(String cmd)
 {
-   int wait = getNumber();
+  cmd = cmd.substring(5);    
+  int wait = atoi(getValue(cmd, ',', 0).c_str());
   Serial.print("Wait: ");
   Serial.println(wait);
   delay(wait);
 }
 
-void cmdMoveMotor()
+void cmdMoveMotor(String cmd)
 {
-  int motor= getNumber();
-  Serial.print("Mov: motor ");
-  Serial.print(motor);
-  
-  int frequency = getNumber();
-  Serial.print(", frequency ");
-  Serial.println(frequency);
 
-  servo.setPWM(motor,0, frequency);
+  // strip the command from the start of the string including the comma
+  cmd = cmd.substring(4);    
+  int motor= atoi(getValue(cmd, ',', 0).c_str());
+  
+  int frequency = atoi(getValue(cmd, ',', 1).c_str());
+
+  
+  if (motor < 0  || motor > maxMotor)
+  {
+    Serial.print("Invalid motor: ");
+    Serial.println(motor);
+  }
+  else
+  {
+    // We have a valid motor.    
+    if (motorPos[motor] == 0)
+        servo.setPWM(motor,0, frequency);
+     else
+     {
+          // We know where the motor is so lets move it progressively into place
+
+         int increment = 10;
+
+        if (motorPos[motor] < frequency)
+        {
+           for (int i = motorPos[motor]; i < frequency; i+=increment)
+           {
+               servo.setPWM(motor,0,i);
+           }
+        }
+        else
+        {
+           for (int i = motorPos[motor]; i > frequency; i-=increment)
+           {
+               servo.setPWM(motor,0,i);
+           }
+        }
+     }
+     motorPos[motor] = frequency;
+    Serial.print("Mov: motor ");
+    Serial.print(motor);
+    Serial.print(", frequency ");
+    Serial.println(frequency);
+  }
+   Serial.flush();
 }
 
-void cmdStopMotor()
+void cmdStopMotor(String cmd)
 {
-  int motor= getNumber();
+   cmd = cmd.substring(5);    
+   int motor = atoi(getValue(cmd, ',', 0).c_str());
+
   Serial.print("Stop: motor ");
   Serial.println(motor);
  
   servo.setPWM(motor,0, 0);
+      Serial.flush();
 }
 
 
 
-long getNumber()
+String getValue(String data, char separator, int index)
 {
-  long serialdata = 0;
-  int inbyte = 0;
-  inbyte = Serial.read();
 
-  while (inbyte != ',' && inbyte != '\n')
-  {
+    int maxIndex = data.length()-1;
+    int j=0;
+    String chunkVal = "";
 
-    if (inbyte > 0 && inbyte != ' ')
+    for(int i=0; i<=maxIndex && j<=index; i++)
     {
-      serialdata = serialdata * 10 + inbyte - '0';
+      chunkVal.concat(data[i]);
 
-    }
-    inbyte = Serial.read(); 
+      if(data[i]==separator)
+      {
+        j++;
 
-  }
+        if(j>index)
+        {
+          chunkVal.trim();
+          return chunkVal;
+        }    
 
-
-  return serialdata;
+        chunkVal = "";    
+      }  
+    }  
 }
-
-
-
 
 

@@ -1,0 +1,77 @@
+// 0- base 110 (hard right) -475 centre - 230
+// 1- sholder - 220-600+
+// 2- elbow - 200-630
+// 5 - wrist (rotate) - 200 - 620 (500 horizontal motor up)
+// 7 - wrist (vertica) 200 - 570
+// 15 - gripper 550 (closed), 450 (open)
+
+// Set variables
+
+set,base,0
+set,shoulder,1
+set,elbow,2
+set,wrist-rotate,5
+set,wrist-vertical,7
+set,gripper,15
+
+// base known positions
+set,base-centre,230
+set,base-left,460
+
+// elbow know positions
+set,elbow-90,190
+
+// shoulder known positions
+set,shoulder-90,470
+set,shoulder-45,550
+// estimate only
+set,shoulder-horizontal,630
+
+// gripper known positions
+set,gripper-open,450
+set,gripper-closed,550
+
+// wrist-vertical
+set,wrist-vertical-horizontal,500
+
+// Home
+
+// shoulder
+mov,shoulder,shoulder-90
+wait,500
+
+// elbow
+mov,elbow,elbow-90
+wait,500
+
+// centre base
+mov,base,base-centre
+wait,500
+
+// open gripper
+mov,gripper, 450
+wait,500
+
+
+mov,base,255
+wait,500
+mov,base,280
+wait,500
+mov,base,310
+wait,500
+mov,base,320
+
+
+// sholder down
+mov,shoulder,580
+
+// pick
+mov,gripper, 550
+
+stop,base
+stop,shoulder
+stop,elbow
+stop,wrist-rotate
+stop,wrist-vertical
+stop,gripper
+

@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.HashMap;
 import java.util.stream.Stream;
 
 import javax.swing.JButton;
@@ -26,12 +27,14 @@ public class SequenceUI extends JFrame
 	private File activeFile = null;
 	private iDisplay display;
 	private iCmdRunner cmdRunner;
+	private File lastDir;
+	private static HashMap<String, String> variables = new HashMap<>();
 
 	SequenceUI(iDisplay display, iCmdRunner cmdRunner)
 	{
 		this.display = display;
 		this.cmdRunner = cmdRunner;
-		
+
 		this.setTitle("Sequence Runner");
 		JTextArea commands = new JTextArea();
 		DefaultCaret caret = (DefaultCaret) commands.getCaret();
@@ -72,6 +75,7 @@ public class SequenceUI extends JFrame
 	{
 		// Create a file chooser
 		final JFileChooser fc = new JFileChooser();
+		fc.setCurrentDirectory(lastDir);
 		FileNameExtensionFilter filter = new FileNameExtensionFilter("Robot Move files", "rmf");
 		fc.setFileFilter(filter);
 		// In response to a button click:
@@ -79,7 +83,10 @@ public class SequenceUI extends JFrame
 
 		if (returnVal == JFileChooser.APPROVE_OPTION)
 		{
+			lastDir = activeFile.getParentFile();
 			activeFile = fc.getSelectedFile();
+			if (!activeFile.getName().endsWith(".rmf"))
+				activeFile = new File(activeFile.getParentFile(), activeFile.getName() + ".rmf");
 			save(frame, commands);
 		}
 	}
@@ -125,7 +132,8 @@ public class SequenceUI extends JFrame
 	{
 		// Create a file chooser
 		final JFileChooser fc = new JFileChooser();
-		FileNameExtensionFilter filter = new FileNameExtensionFilter("Robot Move files", "mov");
+		fc.setCurrentDirectory(lastDir);
+		FileNameExtensionFilter filter = new FileNameExtensionFilter("Robot Move files", "rmf");
 		fc.setFileFilter(filter);
 		// In response to a button click:
 		int returnVal = fc.showOpenDialog(frame);
@@ -135,6 +143,7 @@ public class SequenceUI extends JFrame
 			try
 			{
 				activeFile = fc.getSelectedFile();
+				lastDir = activeFile.getParentFile();
 				try (Stream<String> lines = Files.lines(activeFile.toPath()))
 				{
 					lines.forEach(s -> commands.append(s + "\n"));
@@ -148,7 +157,7 @@ public class SequenceUI extends JFrame
 		}
 	}
 
-	private void runSequence(String text)
+	public void runSequence(String text)
 	{
 		if (!cmdRunner.isConnected())
 			this.display.showError("Device is not connected");
@@ -160,14 +169,9 @@ public class SequenceUI extends JFrame
 
 				for (String cmd : cmds)
 				{
-					cmd = cmd.trim();
-					// ignore comment lines
-					if (cmd.startsWith("//"))
-						this.display.append("Ignored: " + cmd);
-					else
-					{
+					cmd = preprocessCommand(cmd, this.display);
+					if (cmd != null)
 						this.cmdRunner.sendCmd(cmd);
-					}
 				}
 				this.display.append("Sequence sent in full\n");
 			}
@@ -177,6 +181,68 @@ public class SequenceUI extends JFrame
 			}
 		}
 
+	}
+
+	static String preprocessCommand(String cmd, iDisplay display)
+	{
+		String orginalCmd = cmd;
+		// remove all spaces from the command
+		cmd.replaceAll("\\s","");
+
+		if (cmd.length() == 0)
+			return null;
+
+		// ignore comment lines
+		if (cmd.startsWith("//"))
+		{
+			display.append("Ignored: " + orginalCmd + "\n");
+			return null;
+		}
+		else if (cmd.startsWith("set"))
+		{
+			String[] tokens = cmd.split("[,]");
+
+			if (tokens.length != 3)
+				display.append("Invalid set command:" + cmd);
+			else
+			{
+				String varName = tokens[1];
+				String varValue = tokens[2];
+				variables.put(varName, varValue);
+			}
+			cmd = null;
+		}
+		else
+		{
+			cmd = substituteVariables(cmd);
+			
+		}
+		return cmd;
+	}
+
+	private static String substituteVariables(String cmd)
+	{
+		String newCmd;
+		String[] tokens = cmd.split("[,]");
+
+		if (tokens.length > 0)
+		{
+			newCmd = tokens[0];
+			// do substitution
+			for (int i = 1; i < tokens.length; i++)
+			{
+				String value = variables.get(tokens[i]);
+				if (value == null)
+				{
+					value = tokens[i];
+				}
+				newCmd += ",";
+				newCmd += value;
+			}
+		}
+		else
+			newCmd = cmd;
+		return newCmd;
 	}
 
 }

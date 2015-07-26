@@ -1,3 +1,12 @@
+/**
+ * 0- base 110-475 centre - 230
+1- sholder - 220-600+
+2- elbow - 200-630
+5 - wrist (rotate) - 200 - 620
+7 - wrist (vertica) 200 - 570
+15 - gripper 550 (closed), 450 (open)
+
+ */
 package robotarm;
 
 import java.awt.BorderLayout;
@@ -21,8 +30,12 @@ import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.text.DefaultCaret;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 public class Main extends JFrame implements iDisplay, iCmdRunner
 {
+	Logger logger = LogManager.getLogger(Main.class);
 
 	private static final long serialVersionUID = 1L;
 	private static RobotResponseListener robotResponseListener;
@@ -35,6 +48,7 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 	private JButton sequence;
 	private JButton stopAll;
 	private boolean isConnected = false;
+	private JButton clear;
 
 	private void initUI()
 	{
@@ -60,18 +74,19 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 		actionButton.addActionListener(e -> {
 			try
 			{
-				sendCmd(actionField.getText());
+				String cmd = SequenceUI.preprocessCommand(actionField.getText(), this);
+				if (cmd != null)
+					sendCmd(cmd);
 			}
 			catch (Exception e1)
 			{
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
+				logger.error(e1, e1);
 			}
 			actionField.setText("");
 		});
 		actionPanel.add(actionButton, BorderLayout.EAST);
 
-		JPanel buttonPanel = new JPanel(new GridLayout(6, 1));
+		JPanel buttonPanel = new JPanel(new GridLayout(7, 1));
 		contentPane.add(buttonPanel, BorderLayout.EAST);
 		JButton refresh = new JButton("Refresh Ports");
 		refresh.addActionListener(e -> refreshPorts());
@@ -98,8 +113,11 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 
 		sequence = new JButton("Sequences");
 		sequence.addActionListener(e -> sendSequence());
-
 		buttonPanel.add(sequence);
+
+		clear = new JButton("Clear");
+		clear.addActionListener(e -> outputField.setText(""));
+		buttonPanel.add(clear);
 
 		outputField = new JTextArea();
 		outputField.setEditable(false);
@@ -162,13 +180,11 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 			this.isConnected = false;
 			robotResponseListener.stop();
 			fosDevice.close();
-			
+
 			connect.setEnabled(true);
 			disconnect.setEnabled(false);
 			stopAll.setEnabled(false);
 			actionButton.setEnabled(false);
-
-			outputField.setText("");
 
 		}
 		catch (IOException e)
@@ -176,7 +192,6 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 			showException(e);
 		}
 	}
-
 
 	private void connect()
 	{
@@ -186,21 +201,30 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 		if (port != null)
 		{
 			String[] cmd =
-			{ "/bin/sh", "-c", "stty raw -F " + port };
+			// { "/bin/sh", "-c", "stty raw -F " + port };
+
+			{
+					"/bin/sh",
+					"-c",
+					"stty raw -F "
+							+ port
+							+ "cs8 115200 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts" };
 			try
 			{
 				Runtime.getRuntime().exec(cmd);
+				
+				this.outputField.setText("");
 
 				File portFile = new File("/dev", port);
 				robotResponseListener.start(portFile);
 				fosDevice = new FileOutputStream(portFile);
-				
+
 				try
 				{
-					sendCmd("Hi");
+					sendCmd("hi");
 				}
 				catch (NotConnectedException e)
-				{	
+				{
 					showError("Not Connected");
 				}
 
@@ -232,12 +256,22 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 		try
 		{
 			if (fosDevice != null)
+			{
 				fosDevice.write(message.getBytes());
+				fosDevice.flush();
+				logger.error("Sending: {}", message);
+				// give the serial port/arduino a chance to catchup
+				Thread.sleep(200);
+			}
 
 		}
 		catch (IOException e)
 		{
 			showException(e);
+		}
+		catch (InterruptedException e)
+		{
+			// should never happen
 		}
 	}
 
@@ -251,7 +285,7 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 
 		for (File file : listOfFiles)
 		{
-			if (file.getName().startsWith("ttyACM"))
+			if (file.getName().startsWith("ttyACM") || file.getName().startsWith("cu.usb"))
 			{
 				ports.add(file.getName());
 			}
@@ -282,20 +316,20 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 		});
 
 		robotResponseListener = new RobotResponseListener(ex);
-		new Thread(robotResponseListener).start();
+		// new Thread(robotResponseListener, "Robot Response Listener").start();
 	}
 
 	@Override
 	public boolean isConnected()
 	{
-		return isConnected ;
+		return isConnected;
 	}
 
 	@Override
 	public void showError(String message)
 	{
 		JOptionPane.showMessageDialog(null, message);
-		
+
 	}
 
 	public void showException(Exception e)
