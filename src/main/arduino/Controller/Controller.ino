@@ -137,6 +137,7 @@ void cmdMoveMotor(String cmd)
            for (int i = motorPos[motor]; i < frequency; i+=increment)
            {
                servo.setPWM(motor,0,i);
+               delay(100);
            }
         }
         else
