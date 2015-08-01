@@ -11,7 +11,7 @@ set,base,0
 set,shoulder,1
 set,elbow,2
 set,wrist-rotate,5
-set,wrist,7
+set,wrist-vertical,7
 set,gripper,15
 
 // base known positions
@@ -28,67 +28,57 @@ set,shoulder-45,550
 set,shoulder-horizontal,630
 
 // gripper known positions
-set,open,400
-set,closed,550
+set,gripper-open,450
+set,gripper-closed,550
 
 // wrist-vertical
-set,wrist-horizontal,500
+set,wrist-vertical-horizontal,500
 
-// turn all motors on
-on,base
-on,shoulder
-on,elbow
-on,wrist
+// Start at Home
+mov,base,200
+mov,shoulder,shoulder-90
+mov,elbow,elbow-90
+mov,wrist-vertical,300
 
-// raise the shoulder
+// shoulder
+mov,shoulder,shoulder-90
+mov,shoulder,400
 
-mov,wrist,420
-mov,shoulder,420
-mov,elbow,280
-
-// move base over object
-// 305, 330
-mov,base,320
-mov,wrist-rotate,500
-
-mov,gripper,open
-
+// elbow
 mov,elbow,250
-mov,wrist,500
-mov,shoulder,500
+mov,elbow,elbow-90
 
-//wait,2000
+// wrist
+mov,wrist-vertical,wrist-vertical-horizontal
+
+// centre base
+mov,base,200
+mov,base,base-centre
+
+
+// open gripper
+mov,gripper,gripper-open
+mov,gripper,gripper-closed
+mov,gripper,gripper-open
 
 
 // sholder down
 //mov,shoulder,580
 
 // pick
-mov,gripper,closed
-mov,elbow,300
-mov,base,475
-
-//drop
-mov,base,180
-mov,elbow,190
-mov,gripper,open
-mov,shoulder,shoulder-90
-
-
+//mov,gripper, 550
 
 
 // send back to home
 mov,base,200
 mov,shoulder,shoulder-90
 mov,elbow,elbow-90
-mov,gripper,closed
-mov,wrist,300
-
+mov,wrist-vertical,300
 
 stop,base
 stop,shoulder
 stop,elbow
 stop,wrist-rotate
-stop,wrist
+stop,wrist-vertical
 stop,gripper
 

@@ -152,16 +152,18 @@ public class Robot implements iRobot
 	public void sendCmd(String originalCmd, iDisplay display) throws NotConnectedException, IOException,
 			TimeoutException, InvalidMotorException, InvaidMotorFrequency, InvalidMotorConfiguration, IllegalCommandException
 	{
+		originalCmd = originalCmd.trim();
 		// make certain the cmd doesnt' have a newline at this point as it
 		// confuses the tokenisation.
 		if (originalCmd.endsWith("\n"))
 			originalCmd = originalCmd.substring(0, originalCmd.length() - 1);
 
-		display.append("Send:" + originalCmd + "\n");
 
 		String cmd = preprocessCommand(originalCmd, display);
 		if (cmd != null)
 		{
+			display.append("Send:" + originalCmd + "\n");
+
 			if (!interceptMoves(cmd))
 				sendToRobot(cmd);
 		}
@@ -311,7 +313,7 @@ public class Robot implements iRobot
 	}
 
 	void moveMotor(String motorPin, String frequency) throws NotConnectedException, IOException, TimeoutException,
-			InvalidMotorException, InvaidMotorFrequency, InvalidMotorConfiguration
+			InvalidMotorException, InvaidMotorFrequency, InvalidMotorConfiguration, IllegalCommandException
 	{
 		Motor motor = configuration.getMotor(motorPin);
 		motor.move(this, display, frequency);
@@ -397,6 +399,12 @@ public class Robot implements iRobot
 	{
 		configuration.setLastSaveDirectory(currentDirectory);
 
+	}
+
+	public RobotConfig getConfiguration()
+	{
+		// TODO Auto-generated method stub
+		return configuration;
 	}
 
 }

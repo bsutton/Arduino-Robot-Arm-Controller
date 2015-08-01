@@ -193,7 +193,7 @@ public class SequenceUI extends JFrame
 						for (String cmd : cmds)
 						{
 							if (cmd != null)
-								this.robot.sendCmd(cmd, display);
+								this.robot.sendCmd(cmd.trim(), display);
 						}
 						SwingUtilities.invokeLater(() -> this.display.append("Sequence sent in full\n"));
 					}
