@@ -13,10 +13,14 @@ import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.GridLayout;
-import java.io.File;
-import java.io.FileOutputStream;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
+import java.util.prefs.BackingStoreException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -28,18 +32,26 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingUtilities;
 import javax.swing.text.DefaultCaret;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-public class Main extends JFrame implements iDisplay, iCmdRunner
+import robot.IllegalCommandException;
+import robot.InvaidMotorFrequency;
+import robot.InvalidMotorConfiguration;
+import robot.InvalidMotorException;
+import robot.NotConnectedException;
+import robot.Robot;
+import robot.RobotConfigDialog;
+
+public class Main extends JFrame implements iDisplay
 {
 	Logger logger = LogManager.getLogger(Main.class);
 
 	private static final long serialVersionUID = 1L;
-	private static RobotResponseListener robotResponseListener;
-	private FileOutputStream fosDevice;
+	static Robot robot;
 	private JTextArea outputField;
 	private JComboBox<String> portField;
 	private JButton disconnect;
@@ -47,8 +59,11 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 	private JButton connect;
 	private JButton sequence;
 	private JButton stopAll;
-	private boolean isConnected = false;
 	private JButton clear;
+
+	private JTextField actionField;
+
+	private JButton configurationButton;
 
 	private void initUI()
 	{
@@ -64,30 +79,25 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 
 		JPanel actionPanel = new JPanel(new BorderLayout());
 		contentPane.add(actionPanel, BorderLayout.NORTH);
-		JTextField actionField = new JTextField();
+		actionField = new JTextField();
 		actionPanel.add(actionField, BorderLayout.CENTER);
 
 		actionButton = new JButton("Send Action");
 		actionButton.setPreferredSize(new Dimension(140, 40));
 		actionButton.setEnabled(false);
 		this.getRootPane().setDefaultButton(actionButton);
-		actionButton.addActionListener(e -> {
-			try
-			{
-				String cmd = SequenceUI.preprocessCommand(actionField.getText(), this);
-				if (cmd != null)
-					sendCmd(cmd);
-			}
-			catch (Exception e1)
-			{
-				logger.error(e1, e1);
-			}
-			actionField.setText("");
-		});
+		actionButton.addActionListener(e -> sendAction(actionField.getText()));
+
 		actionPanel.add(actionButton, BorderLayout.EAST);
 
-		JPanel buttonPanel = new JPanel(new GridLayout(7, 1));
+		// Create the side button panel
+		JPanel buttonPanel = new JPanel(new GridLayout(8, 1));
 		contentPane.add(buttonPanel, BorderLayout.EAST);
+
+		configurationButton = new JButton("Configuration");
+		configurationButton.addActionListener(e -> new RobotConfigDialog(this, robot));
+		buttonPanel.add(configurationButton);
+
 		JButton refresh = new JButton("Refresh Ports");
 		refresh.addActionListener(e -> refreshPorts());
 		buttonPanel.add(refresh);
@@ -107,12 +117,12 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 		buttonPanel.add(disconnect);
 
 		stopAll = new JButton("Stop All");
-		stopAll.addActionListener(e -> stopMotors());
+		stopAll.addActionListener(e -> stopAll());
 		stopAll.setEnabled(false);
 		buttonPanel.add(stopAll);
 
 		sequence = new JButton("Sequences");
-		sequence.addActionListener(e -> sendSequence());
+		sequence.addActionListener(e -> showSequenceEditor());
 		buttonPanel.add(sequence);
 
 		clear = new JButton("Clear");
@@ -135,37 +145,95 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 
 		refreshPorts();
 
+		this.addWindowListener(new WindowAdapter()
+		{
+			public void windowClosing(WindowEvent e)
+			{
+				robot.save();
+				try
+				{
+					if (robot.isConnected())
+						robot.stopMotors();
+				}
+				catch (NotConnectedException | IOException | TimeoutException | InvalidMotorException | InvaidMotorFrequency | InvalidMotorConfiguration | IllegalCommandException e1)
+				{
+					showException(e1);
+				}
+			}
+		});
+
 	}
 
-	private void sendSequence()
-	{
-		new SequenceUI(this, this);
-
-	}
-
-	private void stopMotors()
+	private void sendAction(String cmd)
 	{
 		try
 		{
-			for (int i = 0; i < 16; i++)
-				sendCmd("stop " + i);
+			ExecutorService executor = Executors.newSingleThreadExecutor();
+			executor.submit(() -> {
+				try
+				{
+					robot.sendCmd(cmd, this);
+					SwingUtilities.invokeLater(() -> this.append("Sequence sent in full\n"));
+				}
+				catch (Throwable e)
+				{
+					SwingUtilities.invokeLater(() -> this.showException(e));
+				}
+			});
+
 		}
-		catch (NotConnectedException e)
+		catch (Exception e1)
 		{
-			this.isConnected = false;
-			showException(e);
+			logger.error(e1, e1);
+			showException(e1);
+		}
+		actionField.setText("");
+	}
+
+	private void stopAll()
+	{
+		try
+		{
+			robot.stopMotors();
+		}
+		catch (NotConnectedException | IOException | TimeoutException | InvalidMotorException | InvaidMotorFrequency | InvalidMotorConfiguration | IllegalCommandException e)
+		{
+			logger.error(e, e);
+			showError(e.getMessage());
 		}
 	}
 
-	public void sendCmd(String cmd) throws NotConnectedException
+	private void connect()
 	{
-		sendToRobot(cmd + "\n");
+		String port = (String) portField.getSelectedItem();
+
+		outputField.setText("");
+
+		try
+		{
+			robot.connect(port);
+			connect.setEnabled(false);
+			disconnect.setEnabled(true);
+			stopAll.setEnabled(true);
+			actionButton.setEnabled(true);
+		}
+		catch (IOException | NotConnectedException e)
+		{
+			logger.error(e, e);
+			showError(e.getMessage());
+		}
+
+	}
+
+	private void showSequenceEditor()
+	{
+		new SequenceUI(this, robot);
 
 	}
 
 	private void refreshPorts()
 	{
-		ArrayList<String> ports = getPorts();
+		ArrayList<String> ports = robot.getPorts();
 
 		portField.removeAllItems();
 		for (String port : ports)
@@ -175,123 +243,13 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 
 	private void disconnect()
 	{
-		try
-		{
-			this.isConnected = false;
-			robotResponseListener.stop();
-			fosDevice.close();
 
-			connect.setEnabled(true);
-			disconnect.setEnabled(false);
-			stopAll.setEnabled(false);
-			actionButton.setEnabled(false);
+		robot.stop();
 
-		}
-		catch (IOException e)
-		{
-			showException(e);
-		}
-	}
-
-	private void connect()
-	{
-
-		String port = (String) portField.getSelectedItem();
-
-		if (port != null)
-		{
-			String[] cmd =
-			// { "/bin/sh", "-c", "stty raw -F " + port };
-
-			{
-					"/bin/sh",
-					"-c",
-					"stty raw -F "
-							+ port
-							+ "cs8 115200 ignbrk -brkint -icrnl -imaxbel -opost -onlcr -isig -icanon -iexten -echo -echoe -echok -echoctl -echoke noflsh -ixon -crtscts" };
-			try
-			{
-				Runtime.getRuntime().exec(cmd);
-				
-				this.outputField.setText("");
-
-				File portFile = new File("/dev", port);
-				robotResponseListener.start(portFile);
-				fosDevice = new FileOutputStream(portFile);
-
-				try
-				{
-					sendCmd("hi");
-				}
-				catch (NotConnectedException e)
-				{
-					showError("Not Connected");
-				}
-
-				isConnected = true;
-				connect.setEnabled(false);
-				disconnect.setEnabled(true);
-				stopAll.setEnabled(true);
-
-				actionButton.setEnabled(true);
-
-			}
-			catch (IOException e)
-			{
-				showException(e);
-			}
-		}
-		else
-			JOptionPane.showMessageDialog(null, "Please select a port first.");
-
-	}
-
-	void moveMotor(String motor, String frequency) throws NotConnectedException
-	{
-		sendToRobot("mov " + motor + "," + frequency + "\n");
-	}
-
-	void sendToRobot(String message) throws NotConnectedException
-	{
-		try
-		{
-			if (fosDevice != null)
-			{
-				fosDevice.write(message.getBytes());
-				fosDevice.flush();
-				logger.error("Sending: {}", message);
-				// give the serial port/arduino a chance to catchup
-				Thread.sleep(200);
-			}
-
-		}
-		catch (IOException e)
-		{
-			showException(e);
-		}
-		catch (InterruptedException e)
-		{
-			// should never happen
-		}
-	}
-
-	ArrayList<String> getPorts()
-	{
-
-		ArrayList<String> ports = new ArrayList<>();
-
-		File folder = new File("/dev");
-		File[] listOfFiles = folder.listFiles();
-
-		for (File file : listOfFiles)
-		{
-			if (file.getName().startsWith("ttyACM") || file.getName().startsWith("cu.usb"))
-			{
-				ports.add(file.getName());
-			}
-		}
-		return ports;
-
+		connect.setEnabled(true);
+		disconnect.setEnabled(false);
+		stopAll.setEnabled(false);
+		actionButton.setEnabled(false);
 	}
 
 	@Override
@@ -304,37 +262,44 @@ public class Main extends JFrame implements iDisplay, iCmdRunner
 	public static void main(String[] args)
 	{
 
-		final Main ex = new Main();
+		final Main main = new Main();
 		EventQueue.invokeLater(new Runnable()
 		{
 
 			public void run()
 			{
-				ex.initUI();
-				ex.setVisible(true);
+				main.initUI();
+				main.setVisible(true);
 			}
 		});
 
-		robotResponseListener = new RobotResponseListener(ex);
-		// new Thread(robotResponseListener, "Robot Response Listener").start();
+		try
+		{
+			robot = new Robot(main);
+		}
+		catch (BackingStoreException e)
+		{
+			String message = e.getMessage();
+			if (message == null || message.length() == 0)
+				message = e.getCause().toString();
+			JOptionPane.showMessageDialog(null, message);
+		}
 	}
 
-	@Override
-	public boolean isConnected()
-	{
-		return isConnected;
-	}
-
-	@Override
 	public void showError(String message)
 	{
 		JOptionPane.showMessageDialog(null, message);
 
 	}
 
-	public void showException(Exception e)
+	public void showException(Throwable e)
 	{
-		JOptionPane.showMessageDialog(null, e.getMessage());
+		String message = e.getMessage();
+		
+		if (message == null || message.length() == 0)
+			message = (e.getCause() != null ? e.getCause().toString() : e.toString());
+		
+		logger.error(e,e);
+		JOptionPane.showMessageDialog(null, message);
 	}
-
 }

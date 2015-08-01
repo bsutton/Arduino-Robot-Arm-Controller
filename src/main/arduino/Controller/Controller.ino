@@ -21,7 +21,7 @@ void setup()
   for (int i = 0; i <= maxMotor; i++)
     motorPos[i] = 0;
     
-  Serial.println("Ready for action");
+
 }
 
 
@@ -53,13 +53,6 @@ void loop()
     cmd.trim();
     cmd.toLowerCase();
     
-//    Serial.print("Processing(");
-//    Serial.print(processingCount++);
-//    Serial.print("): '");
-//    Serial.print(cmd);
-//    Serial.println("'");
-//    Serial.flush();
-
    if (cmd.startsWith("hi"))
     cmdHi();
   else   if (cmd.startsWith("mov"))
@@ -75,6 +68,8 @@ void loop()
   }
   else if (cmd.equalsIgnoreCase(""))
   {
+    Serial.println("Got empty command");
+    Serial.flush();
     // empty line so ignore it.
     
   }
@@ -88,6 +83,8 @@ void loop()
     Serial.flush();
 
   }
+    //Serial.println("Loop");
+    //Serial.flush();
 
 
 }
@@ -130,14 +127,14 @@ void cmdMoveMotor(String cmd)
      {
           // We know where the motor is so lets move it progressively into place
 
-         int increment = 10;
+         int increment = 5;
 
         if (motorPos[motor] < frequency)
         {
            for (int i = motorPos[motor]; i < frequency; i+=increment)
            {
                servo.setPWM(motor,0,i);
-               delay(100);
+               delay(50);
            }
         }
         else
@@ -145,6 +142,7 @@ void cmdMoveMotor(String cmd)
            for (int i = motorPos[motor]; i > frequency; i-=increment)
            {
                servo.setPWM(motor,0,i);
+               delay(50);
            }
         }
      }
@@ -162,11 +160,11 @@ void cmdStopMotor(String cmd)
    cmd = cmd.substring(5);    
    int motor = atoi(getValue(cmd, ',', 0).c_str());
 
-  Serial.print("Stop: motor ");
-  Serial.println(motor);
  
   servo.setPWM(motor,0, 0);
-      Serial.flush();
+  Serial.print("Stop: motor ");
+  Serial.println(motor);
+  Serial.flush();
 }
 
 
@@ -196,5 +194,6 @@ String getValue(String data, char separator, int index)
       }  
     }  
 }
+
 
 
