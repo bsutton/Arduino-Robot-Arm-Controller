@@ -31,7 +31,7 @@
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
-									<archive>
+					<archive>
 						<index>true</index>
 						<manifest>
 							<addClasspath>true</addClasspath>
@@ -43,7 +43,7 @@
 							<key>value</key>
 						</manifestEntries>
 					</archive>
-					
+
 				</configuration>
 			</plugin>
 
@@ -59,6 +59,11 @@
 			<groupId>org.apache.logging.log4j</groupId>
 			<artifactId>log4j-core</artifactId>
 			<version>2.3</version>
+		</dependency>
+		<dependency>
+			<groupId>rsutton</groupId>
+			<artifactId>robotics</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
 	</dependencies>
 </project>

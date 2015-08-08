@@ -18,6 +18,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import robotarm.iDisplay;
+import robotics.Pose;
+import robotics.Unbranded6dof.ServoCalculator;
 
 public class Robot implements iRobot
 {
@@ -140,8 +142,10 @@ public class Robot implements iRobot
 		{
 			this.isConnected = false;
 			stopping = true;
-			fis.close();
-			fosDevice.close();
+			if (fis != null)
+				fis.close();
+			if (fosDevice != null)
+				fosDevice.close();
 		}
 		catch (IOException e)
 		{
@@ -150,14 +154,14 @@ public class Robot implements iRobot
 	}
 
 	public void sendCmd(String originalCmd, iDisplay display) throws NotConnectedException, IOException,
-			TimeoutException, InvalidMotorException, InvaidMotorFrequency, InvalidMotorConfiguration, IllegalCommandException
+			TimeoutException, InvalidMotorException, InvaidMotorFrequency, InvalidMotorConfiguration,
+			IllegalCommandException
 	{
 		originalCmd = originalCmd.trim();
 		// make certain the cmd doesnt' have a newline at this point as it
 		// confuses the tokenisation.
 		if (originalCmd.endsWith("\n"))
 			originalCmd = originalCmd.substring(0, originalCmd.length() - 1);
-
 
 		String cmd = preprocessCommand(originalCmd, display);
 		if (cmd != null)
@@ -169,7 +173,8 @@ public class Robot implements iRobot
 		}
 	}
 
-	private String preprocessCommand(String cmd, iDisplay display) throws InvalidMotorException
+	private String preprocessCommand(String cmd, iDisplay display) throws InvalidMotorException,
+			IllegalCommandException
 	{
 		// remove all spaces from the command
 		cmd.replaceAll("\\s", "");
@@ -203,8 +208,40 @@ public class Robot implements iRobot
 
 			// Substitute 'on' for moving the motor to its current known
 			// position.
-			cmd = "mov," + tokens[1] + "," + configuration.getMotor(tokens[1]).getCurrent();
+			Motor motor = configuration.getMotor(tokens[1]);
+			int current = motor.getCurrentPWM();
+			if (motor.isValidPWM(current))
+				cmd = "mov," + tokens[1] + "," + current;
+			else
+			{
+				double difference = motor.getMaxPwm() - motor.getMinPwm();
+				double halfway = difference / 2 + motor.getMinPwm();
+				cmd = "mov," + tokens[1] + "," + (int) halfway;
+			}
 		}
+		else if (cmd.startsWith("pose"))
+		{
+			cmd = substituteVariables(cmd);
+			String[] tokens = cmd.split("[,]");
+
+			if (tokens.length != 4)
+				throw new IllegalCommandException("Pose MUST have three arguments: " + cmd);
+
+			ServoCalculator calculator = new ServoCalculator(configuration.getMotor("base"),
+					configuration.getMotor("shoulder"), configuration.getMotor("elbow"));
+			calculator.setPosition(new Pose(Integer.valueOf(tokens[1]), Integer.valueOf(tokens[2]), Integer
+					.valueOf(tokens[3]), 0, 0, 0));
+			double turrent = calculator.getBasePwm();
+			double shoulder = calculator.getShoulderPwm();
+			double elbow = calculator.getElbowPwm();
+
+			// Substitute 'on' for moving the motor to its current known
+			// position.
+			cmd = "pose," + calculator.getBaseMotor().getPin() + "," + turrent + ","
+					+ calculator.getShoulderMotor().getPin() + "," + shoulder + ","
+					+ calculator.getElbowMotor().getPin() + "," + elbow;
+		}
+
 		else
 		{
 			cmd = substituteVariables(cmd);

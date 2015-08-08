@@ -57,6 +57,8 @@ void loop()
     cmdHi();
   else   if (cmd.startsWith("mov"))
     cmdMoveMotor(cmd);
+  else   if (cmd.startsWith("pose"))
+    cmdPoseMotor(cmd);
   else   if (cmd.startsWith("wait"))
     cmdWait(cmd);
   else   if (cmd.startsWith("stop"))
@@ -153,6 +155,87 @@ void cmdMoveMotor(String cmd)
     Serial.println(frequency);
   }
    Serial.flush();
+}
+
+void cmdPoseMotor(String cmd)
+{
+
+  // strip the command from the start of the string including the comma
+  cmd = cmd.substring(5);    
+  
+  int baseMotor = atoi(getValue(cmd, ',', 0).c_str());
+  int baseFrequency = atoi(getValue(cmd, ',', 1).c_str());
+  if (!validMotor(baseMotor))
+      return;
+  
+  int shoulderMotor = atoi(getValue(cmd, ',', 0).c_str());
+  int shoulderFrequency = atoi(getValue(cmd, ',', 1).c_str());
+  if (!validMotor(shoulderMotor))
+      return;
+
+  int elbowMotor = atoi(getValue(cmd, ',', 0).c_str());
+  int elbowFrequency = atoi(getValue(cmd, ',', 1).c_str());
+  if (!validMotor(elbowMotor))
+      return;
+
+  
+  else
+  {
+    // We have a valid motor.    
+    if (motorPos[motor] == 0)
+        servo.setPWM(motor,0, frequency);
+     else
+     {
+          // We know where the motor is so lets move it progressively into place
+
+         int increment = 5;
+
+        if (motorPos[motor] < frequency)
+        {
+           for (int i = motorPos[motor]; i < frequency; i+=increment)
+           {
+               servo.setPWM(motor,0,i);
+               delay(50);
+           }
+        }
+        else
+        {
+           for (int i = motorPos[motor]; i > frequency; i-=increment)
+           {
+               servo.setPWM(motor,0,i);
+               delay(50);
+           }
+        }
+     }
+     motorPos[motor] = frequency;
+    Serial.print("Pose Base: motor ");
+    Serial.print(baseMotor);
+    Serial.print(", frequency ");
+    Serial.print(baseFrequency);
+    Serial.print("Shoulder: motor ");
+    Serial.print(shoulderMotor);
+    Serial.print(", frequency ");
+    Serial.print(shoulderFrequency);
+
+    Serial.print("Elbow: motor ");
+    Serial.print(elbowMotor);
+    Serial.print(", frequency ");
+    Serial.println(elbowFrequency);
+
+  }
+   Serial.flush();
+}
+
+boolean validateMotor(int base)
+{
+  boolean valid = true;
+  if (motor < 0  || motor > maxMotor)
+  {
+    Serial.print("Invalid motor: ");
+    Serial.println(motor);
+    valid = false;
+  }
+  return valid;
 }
 
 void cmdStopMotor(String cmd)

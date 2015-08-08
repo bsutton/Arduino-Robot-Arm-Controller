@@ -4,32 +4,39 @@ import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 import robotarm.iDisplay;
+import robotics.iMotor;
 
-public class Motor
+public class Motor implements iMotor
 {
 	// The pin the motor is attached to.
 	private int pin;
-	
+
 	// name of the motor
 	private String name;
 
 	// max frequency for this motor
-	private int max;
+	private double maxPWM;
+
+	// The maximum angle of the motor when it is at its maximum PWM
+	private double maxAngle;
 
 	// min frequency for this motor
-	private int min;
+	private double minPWM;
+
+	// The min angle of the motor when it is at its min PWM
+	private double minAngle;
 
 	// the current location for the motor one known.
-	private int current = 0;
+	private double currentPWM = 0;
 
-	private boolean changed=false;
+	private boolean changed = false;
 
 	public Motor(int pin)
 	{
 		this.pin = pin;
 	}
 
-	int getPin()
+	public int getPin()
 	{
 		return pin;
 	}
@@ -39,7 +46,7 @@ public class Motor
 		this.pin = pin;
 	}
 
-	String getName()
+	public String getName()
 	{
 		return name;
 	}
@@ -49,71 +56,65 @@ public class Motor
 		this.name = name.trim();
 	}
 
-	int getMax()
+	public int getCurrentPWM()
 	{
-		return max;
+		return (int) currentPWM;
 	}
 
-	void setMax(int max)
-	{
-		this.max = max;
-	}
-
-	int getMin()
-	{
-		return min;
-	}
-
-	void setMin(int min)
-	{
-		this.min = min;
-	}
-
-	int getCurrent()
-	{
-		return current;
-	}
-
-	void setCurrent(Integer current)
+	void setCurrentPWM(double current)
 	{
 		changed = true;
-		this.current = current;
+		this.currentPWM = current;
 	}
 
 	public void setPin(String text)
 	{
 		this.pin = Integer.valueOf(text);
-		
-	}
-	
-	public void setMin(String text)
-	{
-		this.min = Integer.valueOf(text);
-		
+
 	}
 
-	public void setMax(String text)
+	public void setMinPWM(String text)
 	{
-		this.max = Integer.valueOf(text);
-		
+		this.minPWM = Integer.valueOf(text);
+
 	}
 
-	public void setCurrent(String text)
+	public void setMinPWM(double minPwm)
 	{
-		changed=true;
-		this.current = Integer.valueOf(text);
-		
+		this.minPWM = minPwm;
+
 	}
-	
+
+	public void setMaxPWM(String text)
+	{
+		this.maxPWM = Double.valueOf(text);
+
+	}
+
+	public void setMaxPWM(double max)
+	{
+		this.maxPWM = max;
+
+	}
+
+	public void setCurrentPWM(String text)
+	{
+		changed = true;
+		this.currentPWM = Double.valueOf(text);
+
+	}
+
 	public String toString()
 	{
-		return "Motor: " + name + " pin: " + pin + " min: " + min + " max: " + max + " current: " + current;
+		return "Motor: " + name + " pin: " + pin + " min: " + minPWM + " max: " + maxPWM + " current: " + currentPWM;
 	}
 
-	public void move(Robot robot, iDisplay display, String frequencyString) throws InvaidMotorFrequency, InvalidMotorConfiguration, NotConnectedException, IOException, TimeoutException, InvalidMotorException, IllegalCommandException
+	public void move(Robot robot, iDisplay display, String frequencyString) throws InvaidMotorFrequency,
+			InvalidMotorConfiguration, NotConnectedException, IOException, TimeoutException, InvalidMotorException,
+			IllegalCommandException
 	{
 		int frequency = -1;
-		
+
 		try
 		{
 			frequency = Integer.valueOf(frequencyString);
@@ -122,38 +123,77 @@ public class Motor
 		{
 			throw new InvaidMotorFrequency(this, "Invalid frequency passed", frequency);
 		}
-		
-		// check frequency range
-		if (this.min == 0 && this.max == 0)
-			throw new InvalidMotorConfiguration(this, "You have not set max/min for this motor.");
-		
-		if (frequency > this.max)
-			throw new InvaidMotorFrequency(this, "The selected frequency is greater than the motors max.", frequency);
-		
 
-		if (frequency < this.min)
+		// check frequency range
+		if (this.minPWM == 0 && this.maxPWM == 0)
+			throw new InvalidMotorConfiguration(this, "You have not set max/min for this motor.");
+
+		if (frequency > this.maxPWM)
+			throw new InvaidMotorFrequency(this, "The selected frequency is greater than the motors max.", frequency);
+
+		if (frequency < this.minPWM)
 			throw new InvaidMotorFrequency(this, "The selected frequency is less than the motors min.", frequency);
 
 		robot.sendToRobot("mov," + this.getPin() + "," + frequency);
 
-		changed=true;
-		this.current = frequency;
-		
+		changed = true;
+		this.currentPWM = frequency;
+
 	}
 
-	public void stop(Robot robot, iDisplay display) throws NotConnectedException, IOException, TimeoutException, InvalidMotorException, InvaidMotorFrequency, InvalidMotorConfiguration, IllegalCommandException
+	public void stop(Robot robot, iDisplay display) throws NotConnectedException, IOException, TimeoutException,
+			InvalidMotorException, InvaidMotorFrequency, InvalidMotorConfiguration, IllegalCommandException
 	{
 		robot.sendCmd("stop," + this.pin, display);
-		
+
 	}
 
 	public boolean hasMoved()
 	{
-		boolean hasMoved=changed;
-		changed=false;
-		
+		boolean hasMoved = changed;
+		changed = false;
+
 		return hasMoved;
 	}
 
+	@Override
+	public double getMaxPwm()
+	{
+		return maxPWM;
+	}
 
+	@Override
+	public double getMinPwm()
+	{
+		return minPWM;
+	}
+
+	@Override
+	public double getMinAngle()
+	{
+		return minAngle;
+	}
+
+	@Override
+	public double getMaxAngle()
+	{
+		return maxAngle;
+	}
+
+	public void setMinAngle(String text)
+	{
+		this.minAngle = Double.valueOf(text);
+
+	}
+
+	public void setMaxAngle(String text)
+	{
+		this.maxAngle = Double.valueOf(text);
+
+	}
+
+	public boolean isValidPWM(int PWM)
+	{
+		return PWM >= minPWM && PWM <= maxPWM;
+	}
 }

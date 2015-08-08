@@ -31,7 +31,7 @@ public class RobotConfigDialog extends JDialog
 	JButton okButton = new JButton("OK");
 	JButton cancelButton = new JButton("Cancel");
 
-	GridLayout gridLayout = new GridLayout(Robot.MAX_MOTORS + 1, 5);
+	GridLayout gridLayout = new GridLayout(Robot.MAX_MOTORS + 1, 7);
 	private iRobot robot;
 	private MotorFields fields[];
 
@@ -45,8 +45,8 @@ public class RobotConfigDialog extends JDialog
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
 		// force dialog to be centred
-		setPreferredSize(new Dimension(600, 500));
-		setSize(new Dimension(600, 500));
+		setPreferredSize(new Dimension(700, 500));
+		setSize(new Dimension(700, 500));
 		setLocationRelativeTo(null);
 
 		pack();
@@ -68,7 +68,7 @@ public class RobotConfigDialog extends JDialog
 		    			{
 		    				Motor motor = motors[i];
 		    				final int iField = i;
-		    				SwingUtilities.invokeLater(() -> fields[iField].current.setText(""+motor.getCurrent()));
+		    				SwingUtilities.invokeLater(() -> fields[iField].currentPWM.setText(""+motor.getCurrentPWM()));
 		    				
 		    			}
 		    		}
@@ -91,17 +91,21 @@ public class RobotConfigDialog extends JDialog
 	{
 		JTextField name;
 		JTextField pin;
-		JTextField min;
-		JTextField max;
-		JTextField current;
+		JTextField minPWM;
+		JTextField minAngle;
+		JTextField maxPWM;
+		JTextField maxAngle;
+		JTextField currentPWM;
 
 		MotorFields(Motor motor)
 		{
 			name = new JTextField(motor.getName());
 			pin = new JTextField("" + motor.getPin());
-			min = new JTextField("" + motor.getMin());
-			max = new JTextField("" + motor.getMax());
-			current = new JTextField("" + motor.getCurrent());
+			minPWM = new JTextField("" + motor.getMinPwm());
+			minAngle = new JTextField("" + motor.getMinAngle());
+			maxPWM = new JTextField("" + motor.getMaxPwm());
+			maxAngle = new JTextField("" + motor.getMaxAngle());
+			currentPWM = new JTextField("" + motor.getCurrentPWM());
 		}
 
 		public JTextField getName()
@@ -114,19 +118,29 @@ public class RobotConfigDialog extends JDialog
 			return pin;
 		}
 
-		public JTextField getMin()
+		public JTextField getMinPWM()
 		{
-			return min;
+			return minPWM;
 		}
 
-		public JTextField getMax()
+		public JTextField getMinAngle()
 		{
-			return max;
+			return minAngle;
 		}
 
-		public JTextField getCurrent()
+		public JTextField getMaxPWM()
 		{
-			return current;
+			return maxPWM;
+		}
+
+		public JTextField getMaxAngle()
+		{
+			return maxAngle;
+		}
+
+		public JTextField getCurrentPWM()
+		{
+			return currentPWM;
 		}
 		
 		
@@ -140,9 +154,11 @@ public class RobotConfigDialog extends JDialog
 		// Set the labels in the first row
 		motorPanel.add(new JLabel("Name"));
 		motorPanel.add(new JLabel("Pin"));
-		motorPanel.add(new JLabel("Min"));
-		motorPanel.add(new JLabel("Max"));
-		motorPanel.add(new JLabel("Current"));
+		motorPanel.add(new JLabel("Min PWM"));
+		motorPanel.add(new JLabel("Min Angle"));
+		motorPanel.add(new JLabel("Max PWM"));
+		motorPanel.add(new JLabel("Max Angle"));
+		motorPanel.add(new JLabel("Current PWM"));
 
 		// Added input controls for each motor setting their value to the motors
 		// current value
@@ -152,9 +168,11 @@ public class RobotConfigDialog extends JDialog
 			fields[i] = new MotorFields(motors[i]);
 			motorPanel.add(fields[i].getName());
 			motorPanel.add(fields[i].getPin());
-			motorPanel.add(fields[i].getMin());
-			motorPanel.add(fields[i].getMax());
-			motorPanel.add(fields[i].getCurrent());
+			motorPanel.add(fields[i].getMinPWM());
+			motorPanel.add(fields[i].getMinAngle());
+			motorPanel.add(fields[i].getMaxPWM());
+			motorPanel.add(fields[i].getMaxAngle());
+			motorPanel.add(fields[i].getCurrentPWM());
 		}
 
 		JPanel controls = new JPanel();
@@ -188,9 +206,11 @@ public class RobotConfigDialog extends JDialog
 		{
 			motors[i].setName(fields[i].getName().getText());
 			motors[i].setPin(fields[i].getPin().getText());
-			motors[i].setMin(fields[i].getMin().getText());
-			motors[i].setMax(fields[i].getMax().getText());
-			motors[i].setCurrent(fields[i].getCurrent().getText());
+			motors[i].setMinPWM(fields[i].getMinPWM().getText());
+			motors[i].setMinAngle(fields[i].getMinAngle().getText());
+			motors[i].setMaxPWM(fields[i].getMaxPWM().getText());
+			motors[i].setMaxAngle(fields[i].getMaxAngle().getText());
+			motors[i].setCurrentPWM(fields[i].getCurrentPWM().getText());
 		}
 	}
 

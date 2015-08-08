@@ -9,10 +9,12 @@ public class RobotConfig
 
 	private static final String NAME = "Name";
 	private static final String PIN = "Pin";
-	private static final String MIN = "Min";
-	private static final String MAX = "Max";
+	private static final String MIN_PWM = "Min";
+	private static final String MAX_PWM = "Max";
 	private static final String CURRENT = "Current";
 	private static final String LAST_SAVE_DIRECTORY = "LastSaveDirectory";
+	private static final String MIN_ANGLE = "MinAngle";
+	private static final String MAX_ANGLE = "MaxAngle";
 
 	private File lastSaveDirectory = new File(".");
 
@@ -44,9 +46,11 @@ public class RobotConfig
 			// Set the value of the preference
 			prefs.put(NAME + ":" + i, motors[i].getName());
 			prefs.putInt(PIN + ":" + i, motors[i].getPin());
-			prefs.putInt(MIN + ":" + i, motors[i].getMin());
-			prefs.putInt(MAX + ":" + i, motors[i].getMax());
-			prefs.putInt(CURRENT + ":" + i, motors[i].getCurrent());
+			prefs.putDouble(MIN_PWM + ":" + i, motors[i].getMinPwm());
+			prefs.putDouble(MIN_ANGLE + ":" + i, motors[i].getMinAngle());
+			prefs.putDouble(MAX_PWM + ":" + i, motors[i].getMaxPwm());
+			prefs.putDouble(MAX_ANGLE + ":" + i, motors[i].getMaxAngle());
+			prefs.putDouble(CURRENT + ":" + i, motors[i].getCurrentPWM());
 		}
 	}
 
@@ -62,9 +66,9 @@ public class RobotConfig
 			// Set the value of the preference
 			motors[i].setName(prefs.get(NAME + ":" + i, ""));
 			motors[i].setPin(prefs.getInt(PIN + ":" + i, i));
-			motors[i].setMin(prefs.getInt(MIN + ":" + i, 0));
-			motors[i].setMax(prefs.getInt(MAX + ":" + i, 0));
-			motors[i].setCurrent(prefs.getInt(CURRENT + ":" + i, 0));
+			motors[i].setMinPWM(prefs.getDouble(MIN_PWM + ":" + i, 0));
+			motors[i].setMaxPWM(prefs.getDouble(MAX_PWM + ":" + i, 0));
+			motors[i].setCurrentPWM(prefs.getInt(CURRENT + ":" + i, 0));
 		}
 		prefs.flush();
 	}
