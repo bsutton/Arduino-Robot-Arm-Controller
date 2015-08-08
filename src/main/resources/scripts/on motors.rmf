@@ -1,0 +1,57 @@
+on,base 
+on,shoulder
+on,elbow
+on,wrist-rotate
+on,wrist
+on,gripper
+
+
+
+// send back to home
+mov,gripper,550
+mov,base,200
+mov,shoulder,470
+mov,elbow,190
+/mov,wrist,300
+
+//preparing for pickup
+mov,base,300
+mov,shoulder,400
+mov,elbow,300
+mov,wrist,415
+mov,gripper,400
+
+//picking up
+mov,base,329
+mov,shoulder,515
+mov,elbow,250
+mov ,wrist-rotate,500
+mov,gripper,550
+
+//moving
+mov,elbow,300
+mov,shoulder,450
+mov,base,200
+mov,shoulder,515
+
+//drop
+mov,wrist,350
+mov,gripper,400
+mov,shoulder,515
+
+
+
+//back to home
+mov,gripper,550
+mov,base,200
+mov,elbow,350
+mov,shoulder,470
+mov,elbow,190
+mov,wrist,300
+
+
+stop,gripper
+stop,base
+stop,shoulder
+stop,elbow
+stop,wrist
