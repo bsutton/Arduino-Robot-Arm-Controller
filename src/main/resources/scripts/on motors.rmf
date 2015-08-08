@@ -24,7 +24,8 @@ mov,gripper,400
 //picking up
 mov,base,329
 mov,shoulder,515
-mov,elbow,250
+mov,wrist,475
+mov,elbow,200
 mov ,wrist-rotate,500
 mov,gripper,550
 
