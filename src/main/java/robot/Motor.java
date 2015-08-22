@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.concurrent.TimeoutException;
 
 import robotarm.iDisplay;
-import robotics.iMotor;
 
 public class Motor implements iMotor
 {
@@ -75,7 +74,7 @@ public class Motor implements iMotor
 
 	public void setMinPWM(String text)
 	{
-		this.minPWM = Integer.valueOf(text);
+		this.minPWM = Double.valueOf(text);
 
 	}
 
@@ -117,7 +116,7 @@ public class Motor implements iMotor
 
 		try
 		{
-			frequency = Integer.valueOf(frequencyString);
+			frequency = Double.valueOf(frequencyString).intValue();
 		}
 		catch (NumberFormatException e)
 		{
