@@ -18,8 +18,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import robotarm.iDisplay;
-import robotics.Pose;
-import robotics.Unbranded6dof.ServoCalculator;
 
 public class Robot implements iRobot
 {
@@ -219,29 +217,6 @@ public class Robot implements iRobot
 				cmd = "mov," + tokens[1] + "," + (int) halfway;
 			}
 		}
-		else if (cmd.startsWith("pose"))
-		{
-			cmd = substituteVariables(cmd);
-			String[] tokens = cmd.split("[,]");
-
-			if (tokens.length != 4)
-				throw new IllegalCommandException("Pose MUST have three arguments: " + cmd);
-
-			ServoCalculator calculator = new ServoCalculator(configuration.getMotor("base"),
-					configuration.getMotor("shoulder"), configuration.getMotor("elbow"));
-			calculator.setPosition(new Pose(Integer.valueOf(tokens[1]), Integer.valueOf(tokens[2]), Integer
-					.valueOf(tokens[3]), 0, 0, 0));
-			double turrent = calculator.getBasePwm();
-			double shoulder = calculator.getShoulderPwm();
-			double elbow = calculator.getElbowPwm();
-
-			// Substitute 'on' for moving the motor to its current known
-			// position.
-			cmd = "pose," + calculator.getBaseMotor().getPin() + "," + turrent + ","
-					+ calculator.getShoulderMotor().getPin() + "," + shoulder + ","
-					+ calculator.getElbowMotor().getPin() + "," + elbow;
-		}
-
 		else
 		{
 			cmd = substituteVariables(cmd);
